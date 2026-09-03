@@ -269,3 +269,51 @@ The project also gave me experience working directly with a management team.
 I learned to clarify requirements, present technical ideas in understandable language, discuss results, receive critical feedback and make changes based on that feedback.
 
 Working on unfamiliar problems under time pressure also taught me to stay focused when the first solution did not work and continue experimenting until I found a better approach.
+## Results and Deliverables
+
+The proof-of-concept stage resulted in a set of practical deliverables rather than only a theoretical system design.
+
+During the project, I delivered:
+
+- a structured brand knowledge base based on company materials and interviews with both founders;
+- a custom GPT for transforming creative briefs into detailed prompts for video-generation models;
+- a prototype of a content-performance analysis agent in Claude;
+- an initial n8n proof of concept for passing brand context into an AI workflow;
+- the proposed architecture of an AI-powered content production pipeline;
+- prompt-engineering approaches for generative video;
+- multiple visual concepts, characters and avatars for video production;
+- 9 complete AI-generated videos created through an iterative production process.
+
+All 9 demonstration videos were reviewed and accepted by the company.
+
+The results were then used as practical reference material while refining the brand's visual direction and Tone of Voice for future AI-generated content.
+
+The video examples also helped identify which parts of the workflow could potentially be automated and where human review remained important.
+## Project Status
+
+The project reached the prototype / proof-of-concept stage.
+
+The main concepts were researched, the proposed workflow was designed, key AI components were prototyped, and 9 demonstration videos were successfully produced and accepted by the company.
+
+A complete end-to-end automated content pipeline was not deployed to production.
+
+After the proof-of-concept stage, the company decided to reconsider which parts of the content-production process should be automated and how the system should fit into its existing workflow.
+
+Further technical implementation was therefore paused while the business requirements were being refined.
+
+The content-performance analysis agent also remains untested on real publication data because the automated publishing and analytics loop has not yet been launched.
+## Demo
+
+The repository will include all 9 video examples produced during the proof-of-concept stage.
+
+For each example, I plan to document:
+
+- the original task;
+- the creative approach;
+- AI tools used;
+- generation process;
+- problems found during generation;
+- iterations and corrections;
+- final accepted result.
+
+This makes it possible to compare the initial task with the final output and see how the workflow evolved through experimentation.
