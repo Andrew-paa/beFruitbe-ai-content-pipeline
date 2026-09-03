@@ -1,1 +1,1662 @@
-
+{
+  "name": "BF_00_DAILY_ORCHESTRATOR",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## BF_00_DAILY_ORCHESTRATOR — STAGE 1\nTriggers: Daily Schedule (06:00) OR Manual Webhook (POST /bf00-run-task, body.Task_ID).\n\nFlow: normalize context -> read 21/22 + reference sheets -> select+validate today READY tasks\n-> HOLD (incomplete) logged / PROCESS -> dedup (Task_ID+Input_Hash) -> DUPLICATE logged / NEW\n-> log RUN_STARTED -> build INTERNAL + PUBLIC contexts (compliance gating) -> pass PUBLIC brief to BF_01.\n\nData boundary before BF_02: BF_01 (research, PASS only) merges with INTERNAL_BRAND_CONTEXT by Task_ID,\nthen Prepare BF_02 Payload emits ONE structured JSON to BF_02. research_status=HOLD -> HOLD branch.\nINTERNAL context (brand/SKU/claims/messages/knowledge) never reaches BF_01. Nothing published.",
+        "height": 360,
+        "width": 620
+      },
+      "id": "f64c1652-0d4b-4318-a888-327793b29bdb",
+      "name": "Sticky Note f85f2ea7",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        3136,
+        1056
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 6
+            }
+          ]
+        }
+      },
+      "id": "6d50029d-9b50-4741-b1e6-987d49858d3f",
+      "name": "Daily Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        800
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "mode",
+              "name": "mode",
+              "value": "scheduled",
+              "type": "string"
+            },
+            {
+              "id": "target_task_id",
+              "name": "target_task_id",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "timezone",
+              "name": "timezone",
+              "value": "Europe/Moscow",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f13c5208-93bd-4330-a841-4b318c8da9e5",
+      "name": "Prepare Scheduled Context",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        800
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "0f9ad03c-c931-4f6e-a869-e44c40454276",
+      "name": "Init Run Context",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        448,
+        896
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "DAILY_TASKS"
+        },
+        "options": {}
+      },
+      "id": "4b2169db-0823-45ef-8b6e-9af6b300a431",
+      "name": "Read Daily Tasks",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        672,
+        896
+      ],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "RUNS_LOG"
+        },
+        "options": {}
+      },
+      "id": "c3f6bd76-a95f-4426-a3ea-16fd7817b145",
+      "name": "Read Runs Log",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        896,
+        896
+      ],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "BRANDS",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "id": "f208a918-f567-4033-9b8d-27458163b3c3",
+      "name": "Read Brands",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1120,
+        896
+      ],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "SKUS",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "id": "65a58137-08e4-45fd-b921-91d7e4c90f9b",
+      "name": "Read SKUs",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1344,
+        896
+      ],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "CLAIMS",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "id": "1c9d61ea-814f-4cd8-a314-2e54b2589f40",
+      "name": "Read Claims",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1568,
+        896
+      ],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "AUDIENCES",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "id": "18980de4-fbc6-4b94-b12e-4f29212fb452",
+      "name": "Read Audiences",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1792,
+        896
+      ],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "MEDIA_LIBRARY",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "id": "1750e931-9502-4ce3-8919-d9b6ae28a604",
+      "name": "Read Media Library",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2016,
+        896
+      ],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "PREVIOUS_CONTENT",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "id": "4f60f7bd-d8f1-4aa8-8959-691c1f0a7fdf",
+      "name": "Read Previous Content",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2240,
+        896
+      ],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "MESSAGES"
+        },
+        "options": {
+          "dataLocationOnSheet": {
+            "values": {
+              "rangeDefinition": "specifyRange",
+              "headerRow": 4,
+              "firstDataRow": 5
+            }
+          }
+        }
+      },
+      "id": "e3e015aa-71c8-4962-bb69-94fac6750922",
+      "name": "Read Messages",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2464,
+        896
+      ],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "KNOWLEDGE"
+        },
+        "options": {
+          "dataLocationOnSheet": {
+            "values": {
+              "rangeDefinition": "specifyRange",
+              "headerRow": 4,
+              "firstDataRow": 5
+            }
+          }
+        }
+      },
+      "id": "2a09740c-d3e8-4ba7-91ec-6db419c3ade9",
+      "name": "Read Knowledge",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2688,
+        800
+      ],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst ctx = $('Init Run Context').first().json;\nconst mode = (ctx.mode || 'scheduled');\nconst targetTaskId = (ctx.target_task_id || '').toString().trim();\nconst tz = (ctx.timezone || 'Europe/Moscow');\nconst today = $now.setZone(tz).toFormat('yyyy-LL-dd');\n\n// Verify these header names against sheet DAILY_TASKS\nconst REQUIRED = ['Task_ID','Task_Date','Brand_ID','SKU_ID','Content_Type'];\n\nconst rows = $('Read Daily Tasks').all().map(function(i){ return i.json; });\nfunction normDate(v){ if(v===undefined||v===null) return ''; var s=v.toString().trim(); return s.length>=10 ? s.slice(0,10) : s; }\n\nconst out = [];\nfor (var idx=0; idx<rows.length; idx++){\n  var r = rows[idx];\n  var taskId = (r.Task_ID===undefined||r.Task_ID===null?'':r.Task_ID.toString().trim());\n  if(!taskId) continue;\n  var status = (r.Task_Status===undefined||r.Task_Status===null?'':r.Task_Status.toString().trim().toUpperCase());\n  var taskDate = normDate(r.Task_Date);\n\n  if(mode==='manual'){ if(taskId!==targetTaskId) continue; }\n  else { if(taskDate!==today) continue; }\n  if(status!=='READY') continue;\n\n  var missing = REQUIRED.filter(function(f){ var val=r[f]; return val===undefined||val===null||val.toString().trim()===''; });\n\n  var parts=[taskId,taskDate,r.Brand_ID,r.SKU_ID,r.Content_Type,r.Channel,r.Audience_ID,r.Brief];\n  var hashSource = parts.map(function(x){ return (x===undefined||x===null)?'':x.toString().trim(); }).join('|');\n  var h=0; for(var k=0;k<hashSource.length;k++){ h=(h*31+hashSource.charCodeAt(k))|0; }\n  var inputHash='H'+(h>>>0).toString(16);\n\n  out.push({ json: Object.assign({}, r, {\n    Task_ID: taskId, Task_Date: taskDate, Task_Status: status,\n    _mode: mode, _today: today, _timezone: tz,\n    Input_Hash: inputHash, _missing_fields: missing,\n    task_state: (missing.length ? 'HOLD' : 'PROCESS')\n  }) });\n}\nreturn out;\n"
+      },
+      "id": "d125fa07-b798-4e3e-be53-187e752176c8",
+      "name": "Select & Validate Tasks",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2912,
+        704
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.task_state }}",
+                    "rightValue": "PROCESS",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "process"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.task_state }}",
+                    "rightValue": "HOLD",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "hold"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "9169ecd4-9606-4774-b233-8d65f8dfb671",
+      "name": "Route Task State",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        3136,
+        704
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst runs = $('Read Runs Log').all().map(function(i){ return i.json; });\nconst existing = {};\nfor (var a=0; a<runs.length; a++){\n  var rr = runs[a];\n  var k = (rr.Task_ID===undefined?'':rr.Task_ID.toString().trim()) + '::' + (rr.Input_Hash===undefined?'':rr.Input_Hash.toString().trim());\n  existing[k] = true;\n}\nconst items = $input.all().map(function(i){ return i.json; });\nconst stamp = $now.toFormat('yyyyLLdd_HHmmss');\nconst out = [];\nfor (var b=0; b<items.length; b++){\n  var t = items[b];\n  var key = t.Task_ID + '::' + t.Input_Hash;\n  var isDup = existing[key] === true;\n  var runId = 'RUN_' + t.Task_ID + '_' + stamp + '_' + t.Input_Hash;\n  out.push({ json: Object.assign({}, t, { Run_ID: runId, dedup_state: (isDup ? 'DUPLICATE' : 'NEW') }) });\n}\nreturn out;\n"
+      },
+      "id": "359e2863-750a-4f53-8f33-33df97bcaa9b",
+      "name": "Dedup & Assign Run",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3360,
+        528
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.dedup_state }}",
+                    "rightValue": "NEW",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "new"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.dedup_state }}",
+                    "rightValue": "DUPLICATE",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "duplicate"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ce36deaa-46a9-41d3-9d00-7c707902894b",
+      "name": "Route Dedup",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        3584,
+        528
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "RUNS_LOG"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Run_ID": "={{ $json.Run_ID }}",
+            "Task_ID": "={{ $json.Task_ID }}",
+            "Input_Hash": "={{ $json.Input_Hash }}",
+            "Run_Status": "RUN_STARTED",
+            "Stage": "ORCHESTRATOR_START",
+            "Message": "Run accepted by orchestrator",
+            "Mode": "={{ $json._mode }}",
+            "Timestamp": "={{ $now.toISO() }}"
+          },
+          "schema": [
+            {
+              "id": "Run_ID",
+              "displayName": "Run_ID",
+              "type": "string",
+              "required": false,
+              "display": true,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Task_ID",
+              "displayName": "Task_ID",
+              "type": "string",
+              "required": false,
+              "display": true,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Input_Hash",
+              "displayName": "Input_Hash",
+              "type": "string",
+              "required": false,
+              "display": true,
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Run_Status",
+              "displayName": "Run_Status",
+              "type": "string",
+              "required": false,
+              "display": true,
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Stage",
+              "displayName": "Stage",
+              "type": "string",
+              "required": false,
+              "display": true,
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Message",
+              "displayName": "Message",
+              "type": "string",
+              "required": false,
+              "display": true,
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Mode",
+              "displayName": "Mode",
+              "type": "string",
+              "required": false,
+              "display": true,
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "type": "string",
+              "required": false,
+              "display": true,
+              "canBeUsedToMatch": false
+            }
+          ]
+        },
+        "options": {
+          "cellFormat": "USER_ENTERED",
+          "useAppend": true
+        }
+      },
+      "id": "9d3709b1-ed06-4b6f-9eec-349f70cb8b0b",
+      "name": "Log RUN_STARTED",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        3808,
+        336
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "\nconst task = $json;\nconst brandId = (task.Brand_ID===undefined||task.Brand_ID===null?'':task.Brand_ID.toString().trim());\nconst skuId = (task.SKU_ID===undefined||task.SKU_ID===null?'':task.SKU_ID.toString().trim());\nconst audId = (task.Audience_ID===undefined||task.Audience_ID===null?'':task.Audience_ID.toString().trim());\nconst today = (task._today || '');\n\nfunction arr(name){ return $(name).all().map(function(i){ return i.json; }); }\nconst brands = arr('Read Brands');\nconst skus = arr('Read SKUs');\nconst claims = arr('Read Claims');\nconst audiences = arr('Read Audiences');\nconst media = arr('Read Media Library');\nconst prev = arr('Read Previous Content');\nconst messages = arr('Filter Approved Messages');\nconst knowledge = arr('Filter Ready Knowledge');\n\nfunction up(v){ return (v===undefined||v===null?'':v.toString().trim().toUpperCase()); }\nfunction yes(v){ return ['TRUE','YES','1','ДА','APPROVED','ALLOWED'].indexOf(up(v)) >= 0; }\nfunction isConfidential(r){ return up(r.Confidentiality || r.Confidential || r.Confidentiality_Level) === 'CONFIDENTIAL'; }\nfunction isActive(r){ var s = up(r.Status); return s==='' || s==='ACTIVE' || s==='PUBLISHED' || s==='APPROVED'; }\nfunction isCurrent(r){ var d = (r.Valid_Until || r.Expiry_Date || '').toString().trim(); if(!d) return true; return d.slice(0,10) >= today; }\nfunction nonEmptyRow(r){ if(!r) return false; var ks=Object.keys(r); for(var i=0;i<ks.length;i++){ var k=ks[i]; if(k==='row_number') continue; if((r[k]===undefined||r[k]===null?'':r[k].toString().trim())!=='') return true; } return false; }\nfunction nonEmptyObj(o){ return o && Object.keys(o).length>0; }\nfunction knowOK(r){ return isActive(r) && isCurrent(r) && yes(r.Approved_for_Knowledge); }\nfunction rightsOK(r){ return yes(r.Usage_Rights) && yes(r.Advertising_Rights) && yes(r.AI_Reference_Rights); }\nfunction pubOK(r){ return knowOK(r) && !isConfidential(r) && rightsOK(r); }\nfunction byBrandSku(r){\n  var okSku = (r.SKU_ID!==undefined && r.SKU_ID!==null && r.SKU_ID.toString().trim()===skuId && skuId!=='');\n  var okBrand = (r.Brand_ID!==undefined && r.Brand_ID!==null && r.Brand_ID.toString().trim()===brandId && brandId!=='');\n  return okSku || okBrand;\n}\n// Filtered Messages/Knowledge: scope to this brand/SKU when tagged; else treat as global.\nfunction relevant(r){\n  var hasBrand = (r.Brand_ID!==undefined && r.Brand_ID!==null && r.Brand_ID.toString().trim()!=='');\n  var hasSku = (r.SKU_ID!==undefined && r.SKU_ID!==null && r.SKU_ID.toString().trim()!=='');\n  if(!hasBrand && !hasSku) return true;\n  return byBrandSku(r);\n}\n\nconst brandObj = brands.filter(function(b){ return b.Brand_ID!==undefined && b.Brand_ID.toString().trim()===brandId; })[0] || {};\nconst skuObj = skus.filter(function(s){ return s.SKU_ID!==undefined && s.SKU_ID.toString().trim()===skuId; })[0] || {};\nconst audObj = audiences.filter(function(a){ return a.Audience_ID!==undefined && a.Audience_ID.toString().trim()===audId; })[0] || {};\n\nconst brandSkuClaims = claims.filter(nonEmptyRow).filter(byBrandSku);\nfunction claimAllowed(r){ return isActive(r) && !isConfidential(r) && yes(r.Approved_for_Knowledge) && yes(r.Usage_Rights) && yes(r.Advertising_Rights); }\nconst allowedClaims = brandSkuClaims.filter(claimAllowed);\nconst forbiddenClaims = brandSkuClaims.filter(function(r){ return !claimAllowed(r); });\n\nconst mediaAssets = media.filter(nonEmptyRow).filter(byBrandSku).filter(function(r){ return knowOK(r) && !isConfidential(r) && yes(r.Usage_Rights); });\nconst prevContent = prev.filter(nonEmptyRow).filter(byBrandSku).filter(knowOK);\nconst relevantMessages = messages.filter(nonEmptyRow).filter(relevant);\nconst relevantKnowledge = knowledge.filter(nonEmptyRow).filter(relevant);\n\n// Clean daily task row (drop internal helper fields)\nconst HELPERS = ['_mode','_today','_timezone','_missing_fields','task_state','dedup_state'];\nconst dailyTask = {};\nObject.keys(task).forEach(function(k){ if(HELPERS.indexOf(k) < 0) dailyTask[k] = task[k]; });\n\n// INTERNAL context — full gated data (never leaves orchestrator boundary; matches BF_02 schema)\nconst INTERNAL_BRAND_CONTEXT = {\n  brand: (nonEmptyObj(brandObj) && knowOK(brandObj)) ? [brandObj] : [],\n  messages: relevantMessages,\n  knowledge: relevantKnowledge,\n  sku: (nonEmptyObj(skuObj) && knowOK(skuObj)) ? skuObj : {},\n  allowed_claims: allowedClaims,\n  forbidden_claims: forbiddenClaims,\n  audience: nonEmptyObj(audObj) ? audObj : {},\n  media_assets: mediaAssets,\n  previous_content: prevContent\n};\n\n// PUBLIC brief — strip confidential fields, only public-eligible rows.\n// NOTE: messages/knowledge/rights/internal links are intentionally NOT here — must not reach BF_01 (Gemini).\nconst STRIP = ['Internal_Price','Cost','Margin','Supplier','Personal_Data','Email','Phone','Rights_Document','Rights_Doc','API_Key','Secret','Unpublished_Promo','Confidential_Notes','Confidentiality','Confidential','Usage_Rights','Advertising_Rights','AI_Reference_Rights'];\nfunction publicSafe(obj){\n  var o = {}; var ks = Object.keys(obj || {});\n  for (var i=0;i<ks.length;i++){\n    var k = ks[i];\n    if (STRIP.indexOf(k) >= 0) continue;\n    if (/price|cost|margin|secret|api[_-]?key|token|personal|email|phone|rights|supplier|unpublished|confiden/i.test(k)) continue;\n    o[k] = obj[k];\n  }\n  return o;\n}\nconst PUBLIC_RESEARCH_BRIEF = {\n  Run_ID: task.Run_ID,\n  Task_ID: task.Task_ID,\n  Content_Type: task.Content_Type,\n  Channel: task.Channel,\n  brand: pubOK(brandObj) ? publicSafe(brandObj) : {},\n  sku: pubOK(skuObj) ? publicSafe(skuObj) : {},\n  claims: allowedClaims.filter(pubOK).map(publicSafe),\n  audience: publicSafe(audObj),\n  reference_media: mediaAssets.filter(pubOK).map(publicSafe),\n  learnings_from_previous: prevContent.filter(pubOK).map(publicSafe)\n};\n\nreturn { json: {\n  Run_ID: task.Run_ID,\n  Task_ID: task.Task_ID,\n  Input_Hash: task.Input_Hash,\n  _mode: task._mode,\n  daily_task: dailyTask,\n  INTERNAL_BRAND_CONTEXT: INTERNAL_BRAND_CONTEXT,\n  PUBLIC_RESEARCH_BRIEF: PUBLIC_RESEARCH_BRIEF\n} };\n"
+      },
+      "id": "e6050479-c4ad-4c65-bd59-ec3164c2472c",
+      "name": "Build Contexts",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3808,
+        528
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "run_id",
+              "name": "Run_ID",
+              "value": "={{ $json.Run_ID }}",
+              "type": "string"
+            },
+            {
+              "id": "task_id",
+              "name": "Task_ID",
+              "value": "={{ $json.Task_ID }}",
+              "type": "string"
+            },
+            {
+              "id": "brief",
+              "name": "PUBLIC_RESEARCH_BRIEF",
+              "value": "={{ $json.PUBLIC_RESEARCH_BRIEF }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b2bc88e5-ebe2-4ec8-9402-5049e699db52",
+      "name": "Prepare BF_01 Payload (public only)",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        4032,
+        464
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "WORKFLOW_ID_BF_01_RESEARCH_GEMINI",
+          "mode": "id"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "7d5bafd9-de02-46cb-8db3-9b4dbd3b0237",
+      "name": "BF_01_RESEARCH_GEMINI",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        4256,
+        464
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "WORKFLOW_ID_BF_99_ERROR_HANDLER"
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "a888ea94-93a8-47ec-8c61-feaf623da050",
+      "name": "BF_99_ERROR_HANDLER",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        6272,
+        464
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "RUNS_LOG"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Run_ID": "={{ $json.Run_ID }}",
+            "Task_ID": "={{ $json.Task_ID }}",
+            "Input_Hash": "={{ $json.Input_Hash }}",
+            "Run_Status": "DUPLICATE_SKIPPED",
+            "Stage": "DEDUP",
+            "Message": "Task already processed with same Task_ID + Input_Hash",
+            "Mode": "={{ $json._mode }}",
+            "Timestamp": "={{ $now.toISO() }}"
+          },
+          "schema": [
+            {
+              "id": "Run_ID",
+              "displayName": "Run_ID",
+              "type": "string",
+              "required": false,
+              "display": true,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Task_ID",
+              "displayName": "Task_ID",
+              "type": "string",
+              "required": false,
+              "display": true,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Input_Hash",
+              "displayName": "Input_Hash",
+              "type": "string",
+              "required": false,
+              "display": true,
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Run_Status",
+              "displayName": "Run_Status",
+              "type": "string",
+              "required": false,
+              "display": true,
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Stage",
+              "displayName": "Stage",
+              "type": "string",
+              "required": false,
+              "display": true,
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Message",
+              "displayName": "Message",
+              "type": "string",
+              "required": false,
+              "display": true,
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Mode",
+              "displayName": "Mode",
+              "type": "string",
+              "required": false,
+              "display": true,
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "type": "string",
+              "required": false,
+              "display": true,
+              "canBeUsedToMatch": false
+            }
+          ]
+        },
+        "options": {
+          "cellFormat": "USER_ENTERED",
+          "useAppend": true
+        }
+      },
+      "id": "d95eb548-1dd2-464b-8ca3-f5530ec50c27",
+      "name": "Log DUPLICATE Skipped",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        3808,
+        912
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "RUNS_LOG"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Run_ID": "",
+            "Task_ID": "={{ $json.Task_ID }}",
+            "Input_Hash": "={{ $json.Input_Hash }}",
+            "Run_Status": "HOLD",
+            "Stage": "VALIDATION",
+            "Message": "={{ 'Missing required fields: ' + ($json._missing_fields || []).join(', ') }}",
+            "Mode": "={{ $json._mode }}",
+            "Timestamp": "={{ $now.toISO() }}"
+          },
+          "schema": [
+            {
+              "id": "Run_ID",
+              "displayName": "Run_ID",
+              "type": "string",
+              "required": false,
+              "display": true,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Task_ID",
+              "displayName": "Task_ID",
+              "type": "string",
+              "required": false,
+              "display": true,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Input_Hash",
+              "displayName": "Input_Hash",
+              "type": "string",
+              "required": false,
+              "display": true,
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Run_Status",
+              "displayName": "Run_Status",
+              "type": "string",
+              "required": false,
+              "display": true,
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Stage",
+              "displayName": "Stage",
+              "type": "string",
+              "required": false,
+              "display": true,
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Message",
+              "displayName": "Message",
+              "type": "string",
+              "required": false,
+              "display": true,
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Mode",
+              "displayName": "Mode",
+              "type": "string",
+              "required": false,
+              "display": true,
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "type": "string",
+              "required": false,
+              "display": true,
+              "canBeUsedToMatch": false
+            }
+          ]
+        },
+        "options": {
+          "cellFormat": "USER_ENTERED",
+          "useAppend": true
+        }
+      },
+      "id": "d198ada4-8462-470b-88f4-ec35d8ec756f",
+      "name": "Log HOLD",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        4704,
+        576
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "bf00-run-task-public-example",
+        "options": {
+          "noResponseBody": true
+        }
+      },
+      "id": "80671a9b-6bcd-4f8f-9899-61e5225ce11b",
+      "name": "Manual Run Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        992
+      ],
+      "webhookId": "80be8fa8-67bb-4ff9-87da-5a75761e654f"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "mode",
+              "name": "mode",
+              "value": "manual",
+              "type": "string"
+            },
+            {
+              "id": "target_task_id",
+              "name": "target_task_id",
+              "value": "={{ $json.body.Task_ID }}",
+              "type": "string"
+            },
+            {
+              "id": "timezone",
+              "name": "timezone",
+              "value": "Europe/Moscow",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "99188267-7ae3-4722-ad0b-bb00dbd28b2e",
+      "name": "Prepare Manual Context",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        992
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ $json.Status }}",
+              "rightValue": "APPROVED",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "leftValue": "={{ $json.Approved_for_Knowledge }}",
+              "rightValue": "YES",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1d159fdf-fddf-4c64-9176-9470da4ba246",
+      "name": "Filter Approved Messages",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        2688,
+        992
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ $json.Knowledge_Record_ID }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "leftValue": "={{ $json.Status }}",
+              "rightValue": "APPROVED",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "leftValue": "={{ $json.Approved_for_Knowledge }}",
+              "rightValue": "YES",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "leftValue": "={{ $json.Readiness }}",
+              "rightValue": "READY",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "leftValue": "={{ $json.Confidentiality }}",
+              "rightValue": "CONFIDENTIAL",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "53b66c17-0e50-4c3a-a102-3e54b3a00b3f",
+      "name": "Filter Ready Knowledge",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        2912,
+        896
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ $json.research_status }}",
+              "rightValue": "PASS",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "54ea6107-f10b-4e45-97e7-e3217d06351c",
+      "name": "Route Research Status",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        4480,
+        384
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "advanced": true,
+        "mergeByFields": {
+          "values": [
+            {
+              "field1": "Task_ID",
+              "field2": "task_id"
+            }
+          ]
+        },
+        "joinMode": "enrichInput1",
+        "options": {
+          "multipleMatches": "first"
+        }
+      },
+      "id": "31e5c9dc-4247-45ae-bc31-bd370949143c",
+      "name": "Merge Research + Internal Context",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        4704,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "\nconst merged = $json;\nconst ctx = merged.INTERNAL_BRAND_CONTEXT || {};\nconst dailyTask = merged.daily_task || {};\n\n// Research packet from BF_01 success output (paired via Merge)\nlet research = {};\ntry { const r = $('BF_01_RESEARCH_GEMINI').item; if (r && r.json) research = r.json; } catch (e) {}\nif (!research || Object.keys(research).length === 0) { research = merged.research_packet || {}; }\n\nconst warnings = [];\nconst internal = {\n  brand: ctx.brand || [],\n  messages: ctx.messages || [],\n  knowledge: ctx.knowledge || [],\n  sku: ctx.sku || {},\n  allowed_claims: ctx.allowed_claims || [],\n  forbidden_claims: ctx.forbidden_claims || [],\n  audience: ctx.audience || {},\n  media_assets: ctx.media_assets || [],\n  previous_content: ctx.previous_content || []\n};\n\nif (!internal.brand.length) warnings.push('brand context empty or not knowledge-approved');\nif (!internal.sku || Object.keys(internal.sku).length === 0) warnings.push('sku context empty or not knowledge-approved');\nif (!internal.allowed_claims.length) warnings.push('no approved claims available for this brand/SKU');\nif (!internal.media_assets.length) warnings.push('no rights-cleared media assets found');\nif (!research || Object.keys(research).length === 0) warnings.push('research_packet from BF_01 is empty');\n\n// prompt_version / instructions_version are not yet sourced anywhere upstream\nconst promptVersion = '';\nconst instructionsVersion = '';\nif (!promptVersion) warnings.push('prompt_version not set (needs a source)');\nif (!instructionsVersion) warnings.push('instructions_version not set (needs a source)');\n\nreturn { json: {\n  task_id: merged.Task_ID || dailyTask.Task_ID || '',\n  run_id: merged.Run_ID || '',\n  prompt_version: promptVersion,\n  instructions_version: instructionsVersion,\n  daily_task: dailyTask,\n  internal_brand_context: internal,\n  research_packet: research,\n  warnings: warnings\n} };\n"
+      },
+      "id": "909bffe8-f573-4815-b65c-ccb89973d59a",
+      "name": "Prepare BF_02 Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4928,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "WORKFLOW_ID_BF_02_SCRIPT_OPENAI",
+          "mode": "id"
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "61fb49c0-ccbd-4a2a-a19e-694f00ca61df",
+      "name": "BF_02_SCRIPT_OPENAI",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        5152,
+        288
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "WORKFLOW_ID_BF_03_IMAGE_GENERATION",
+          "mode": "id"
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "bdbbf760-0480-43a1-8572-3a27023dda0b",
+      "name": "BF_03_IMAGE_GENERATION",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        5376,
+        224
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "WORKFLOW_ID_BF_04_VEO_VIDEO_GENERATION_AND_ASSEMBLY",
+          "mode": "id"
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "cfbc3fab-d7cb-4744-a0d6-ec9c9e25bb49",
+      "name": "BF_04_VEO_VIDEO_GENERATION_AND_ASSEMBLY",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        5600,
+        144
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "WORKFLOW_ID_BF_05_FINAL_GEMINI_QA",
+          "mode": "id"
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "da386754-5877-4d98-b197-683de0bebd0c",
+      "name": "BF_05_FINAL_GEMINI_QA",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        5824,
+        80
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "WORKFLOW_ID_BF_06_ANALYTICS",
+          "mode": "id"
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "d1286567-2af5-498d-917a-aad4967bb187",
+      "name": "BF_06_ANALYTICS",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        6048,
+        0
+      ],
+      "onError": "continueErrorOutput"
+    }
+  ],
+  "connections": {
+    "Daily Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Prepare Scheduled Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Scheduled Context": {
+      "main": [
+        [
+          {
+            "node": "Init Run Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Init Run Context": {
+      "main": [
+        [
+          {
+            "node": "Read Daily Tasks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Daily Tasks": {
+      "main": [
+        [
+          {
+            "node": "Read Runs Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Runs Log": {
+      "main": [
+        [
+          {
+            "node": "Read Brands",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Brands": {
+      "main": [
+        [
+          {
+            "node": "Read SKUs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read SKUs": {
+      "main": [
+        [
+          {
+            "node": "Read Claims",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Claims": {
+      "main": [
+        [
+          {
+            "node": "Read Audiences",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Audiences": {
+      "main": [
+        [
+          {
+            "node": "Read Media Library",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Media Library": {
+      "main": [
+        [
+          {
+            "node": "Read Previous Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Previous Content": {
+      "main": [
+        [
+          {
+            "node": "Read Messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Messages": {
+      "main": [
+        [
+          {
+            "node": "Read Knowledge",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Filter Approved Messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Knowledge": {
+      "main": [
+        [
+          {
+            "node": "Select & Validate Tasks",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Filter Ready Knowledge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Select & Validate Tasks": {
+      "main": [
+        [
+          {
+            "node": "Route Task State",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Task State": {
+      "main": [
+        [
+          {
+            "node": "Dedup & Assign Run",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log HOLD",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dedup & Assign Run": {
+      "main": [
+        [
+          {
+            "node": "Route Dedup",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Dedup": {
+      "main": [
+        [
+          {
+            "node": "Log RUN_STARTED",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Build Contexts",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log DUPLICATE Skipped",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Contexts": {
+      "main": [
+        [
+          {
+            "node": "Prepare BF_01 Payload (public only)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge Research + Internal Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare BF_01 Payload (public only)": {
+      "main": [
+        [
+          {
+            "node": "BF_01_RESEARCH_GEMINI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "BF_01_RESEARCH_GEMINI": {
+      "main": [
+        [
+          {
+            "node": "Route Research Status",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "BF_99_ERROR_HANDLER",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Run Webhook": {
+      "main": [
+        [
+          {
+            "node": "Prepare Manual Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Manual Context": {
+      "main": [
+        [
+          {
+            "node": "Init Run Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Research Status": {
+      "main": [
+        [
+          {
+            "node": "Merge Research + Internal Context",
+            "type": "main",
+            "index": 1
+          }
+        ],
+        [
+          {
+            "node": "Log HOLD",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Research + Internal Context": {
+      "main": [
+        [
+          {
+            "node": "Prepare BF_02 Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare BF_02 Payload": {
+      "main": [
+        [
+          {
+            "node": "BF_02_SCRIPT_OPENAI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "BF_02_SCRIPT_OPENAI": {
+      "main": [
+        [
+          {
+            "node": "BF_03_IMAGE_GENERATION",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "BF_99_ERROR_HANDLER",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "BF_03_IMAGE_GENERATION": {
+      "main": [
+        [
+          {
+            "node": "BF_04_VEO_VIDEO_GENERATION_AND_ASSEMBLY",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "BF_99_ERROR_HANDLER",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "BF_04_VEO_VIDEO_GENERATION_AND_ASSEMBLY": {
+      "main": [
+        [
+          {
+            "node": "BF_05_FINAL_GEMINI_QA",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "BF_99_ERROR_HANDLER",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "BF_05_FINAL_GEMINI_QA": {
+      "main": [
+        [
+          {
+            "node": "BF_06_ANALYTICS",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "BF_99_ERROR_HANDLER",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "BF_06_ANALYTICS": {
+      "main": [
+        [],
+        [
+          {
+            "node": "BF_99_ERROR_HANDLER",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "staticData": null,
+  "pinData": {},
+  "triggerCount": 0,
+  "meta": null
+}
