@@ -1,0 +1,25 @@
+# Примеры работы Script & Prompt Agent
+
+[English version](README.md)
+
+В этой папке собраны реальные примеры работы Custom GPT, разработанного для проекта beFruitbe AI Content Pipeline.
+
+Каждый пример показывает:
+
+- исходный запрос;
+- результат работы агента;
+- сценарий;
+- prompt engineering;
+- factuality checks;
+- human-in-the-loop controls;
+- production logic.
+
+Внутренние идентификаторы, конфиденциальные данные Knowledge Base и часть брендовой документации удалены из публичных примеров.
+
+## Examples
+
+### Example 01 — Pineapple
+
+[«Что происходит с ананасом после того, как он попадает в СОКОчай?»](example-01-pineapple-ru.md)
+
+Короткий пользовательский запрос → сценарий → раскадровка → AI-video prompt → production plan → проверка достоверности.
