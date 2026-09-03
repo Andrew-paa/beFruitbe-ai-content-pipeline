@@ -1,0 +1,25 @@
+# Script & Prompt Agent Examples
+
+[Русская версия](README_RU.md)
+
+This directory contains real examples produced by the Custom GPT developed for the beFruitbe AI Content Pipeline.
+
+Each example demonstrates:
+
+- original user request;
+- agent output;
+- script development;
+- prompt engineering;
+- factuality checks;
+- human-in-the-loop controls;
+- production logic.
+
+Internal identifiers, confidential Knowledge Base data and private brand documentation have been removed from the public examples.
+
+## Examples
+
+### Example 01 — Pineapple
+
+[“What Happens to Pineapple Before It Becomes Part of СОКОчай?”](example-01-pineapple-en.md)
+
+Short user brief → script → storyboard → AI-video prompt → production plan → factuality verification.
